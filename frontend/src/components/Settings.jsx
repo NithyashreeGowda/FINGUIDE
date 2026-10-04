@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   User,
   Lock,
@@ -7,18 +7,25 @@ import {
   ChevronRight,
   X,
 } from "lucide-react";
+import { changePassword, saveSettings, updateMe } from "../api";
 
-export default function Settings({ onSignOut }) {
-  const [activeModal, setActiveModal] = useState(null);
+export default function Settings({
+  user,
+  initialModal = null,
+  onUserUpdated,
+  onSignOut,
+}) {
+  const [activeModal, setActiveModal] = useState(initialModal);
+  const [notice, setNotice] = useState(null);
 
   const [darkMode, setDarkMode] = useState(
     localStorage.getItem("darkMode") === "true"
   );
 
   const [account, setAccount] = useState({
-    name: localStorage.getItem("userName") || "",
-    username: localStorage.getItem("username") || "",
-    email: localStorage.getItem("email") || "",
+    name: user?.name || "",
+    username: user?.username || "",
+    email: user?.email || "",
   });
 
   const [passwords, setPasswords] = useState({
@@ -27,44 +34,71 @@ export default function Settings({ onSignOut }) {
     confirm: "",
   });
 
+  const showNotice = (type, text) => {
+    setNotice({ type, text });
+    setTimeout(() => setNotice(null), 3000);
+  };
+
+  // Apply dark mode, and save it to the database when the user toggles it
+  const firstRun = useRef(true);
   useEffect(() => {
     document.body.classList.toggle("dark-mode", darkMode);
     localStorage.setItem("darkMode", darkMode);
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    saveSettings({ dark_mode: darkMode }).catch(() => {});
   }, [darkMode]);
 
-  const handleAccountSave = () => {
-    localStorage.setItem("userName", account.name);
-    localStorage.setItem("username", account.username);
-    localStorage.setItem("email", account.email);
-
-    setActiveModal(null);
+  const handleAccountSave = async () => {
+    try {
+      const updated = await updateMe({
+        name: account.name,
+        username: account.username,
+        email: account.email,
+      });
+      localStorage.setItem("userName", updated.name);
+      localStorage.setItem("username", updated.username);
+      localStorage.setItem("email", updated.email);
+      onUserUpdated?.(updated);
+      setActiveModal(null);
+      showNotice("success", "Profile updated successfully.");
+    } catch (e) {
+      showNotice("error", e.message);
+    }
   };
 
-  const handlePasswordSave = () => {
-    if (
-      !passwords.current ||
-      !passwords.newPassword ||
-      !passwords.confirm
-    ) {
+  const handlePasswordSave = async () => {
+    if (!passwords.current || !passwords.newPassword || !passwords.confirm) {
+      showNotice("error", "Please fill in all password fields.");
       return;
     }
 
     if (passwords.newPassword !== passwords.confirm) {
-      alert("New passwords do not match.");
+      showNotice("error", "New passwords do not match.");
       return;
     }
 
-    setPasswords({
-      current: "",
-      newPassword: "",
-      confirm: "",
-    });
+    try {
+      await changePassword({
+        current_password: passwords.current,
+        new_password: passwords.newPassword,
+      });
+    } catch (e) {
+      showNotice("error", e.message);
+      return;
+    }
 
+    setPasswords({ current: "", newPassword: "", confirm: "" });
     setActiveModal(null);
+    showNotice("success", "Password changed successfully.");
   };
 
   return (
     <div className="settings-page">
+
+      {notice && <div className={`st-notice ${notice.type}`}>{notice.text}</div>}
 
       {/* HEADER */}
       <div className="settings-header">
@@ -262,17 +296,8 @@ export default function Settings({ onSignOut }) {
 
               <label>
                 Email
-                <input
-                  type="email"
-                  value={account.email}
-                  onChange={(e) =>
-                    setAccount({
-                      ...account,
-                      email: e.target.value,
-                    })
-                  }
-                  placeholder="Email address"
-                />
+                <input type="email" value={account.email} disabled />
+                <span className="settings-hint">Email can't be changed.</span>
               </label>
 
             </div>

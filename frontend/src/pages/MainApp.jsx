@@ -1,207 +1,128 @@
 import { useState } from "react";
 
 import {
-  LayoutDashboard,
-  User,
   MessageSquare,
   History as HistoryIcon,
   Settings as SettingsIcon,
   LogOut,
 } from "lucide-react";
 
-import Overview from "../components/Overview";
-import MyProfile from "../components/MyProfile";
 import Assistant from "../components/Assistant";
 import History from "../components/History";
 import Settings from "../components/Settings";
 
 const NAV_ITEMS = [
-  {
-    id: "assistant",
-    label: "Assistant",
-    icon: MessageSquare,
-  },
-  {
-    id: "profile",
-    label: "Financial Profile",
-    icon: User,
-  },
-  {
-    id: "overview",
-    label: "Overview",
-    icon: LayoutDashboard,
-  },
-  {
-    id: "history",
-    label: "History",
-    icon: HistoryIcon,
-  },
+  { id: "assistant", label: "Assistant", icon: MessageSquare },
+  { id: "history", label: "History", icon: HistoryIcon },
 ];
 
-export default function MainApp({ onSignOut }) {
+export default function MainApp({
+  user,
+  profileData,
+  onProfileUpdated,
+  onUserUpdated,
+  onSignOut,
+}) {
   const [activeTab, setActiveTab] = useState("assistant");
+  const [settingsModal, setSettingsModal] = useState(null);
+  const [openConvId, setOpenConvId] = useState(null);
 
-  /* =========================================================
-     CHANGE PAGE
-  ========================================================= */
-
-  const changeTab = (tab) => {
-    setActiveTab(tab);
+  const openSettings = (modal = null) => {
+    setSettingsModal(modal);
+    setActiveTab("settings");
   };
 
-  /* =========================================================
-     SIGN OUT
-  ========================================================= */
-
   const handleSignOut = () => {
-    /*
-      If App.jsx controls authentication,
-      use the function passed from App.jsx.
-    */
-    if (onSignOut) {
-      onSignOut();
-      return;
-    }
-
-    /*
-      Fallback cleanup if MainApp is being used
-      without an authentication callback.
-    */
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("loggedIn");
-    localStorage.removeItem("user");
-    localStorage.removeItem("profile");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("username");
-    localStorage.removeItem("email");
-
     document.body.classList.remove("dark-mode");
-
-    window.location.href = "/login";
+    onSignOut();
   };
 
   return (
     <div className="app-shell">
-
-      {/* =====================================================
-          SIDEBAR
-      ===================================================== */}
-
       <aside className="sidebar">
-
-        {/* BRAND */}
         <div className="sidebar-brand">
-          <div className="brand-name">
-            FinGuide
-          </div>
-
-          <div className="brand-sub">
-            Personal Financial Assistant
-          </div>
+          <div className="brand-name">FinGuide</div>
+          <div className="brand-sub">Personal Financial Assistant</div>
         </div>
 
-        {/* NAVIGATION */}
         <nav className="sidebar-nav">
-
-          {NAV_ITEMS.map(
-            ({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                type="button"
-                className={`nav-item ${
-                  activeTab === id ? "active" : ""
-                }`}
-                onClick={() => changeTab(id)}
-              >
-                <Icon size={17} />
-                <span>{label}</span>
-              </button>
-            )
-          )}
-
+          {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              className={`nav-item ${activeTab === id ? "active" : ""}`}
+              onClick={() => {
+                setOpenConvId(null);
+                setActiveTab(id);
+              }}
+            >
+              <Icon size={17} />
+              <span>{label}</span>
+            </button>
+          ))}
         </nav>
 
-        {/* SIDEBAR FOOTER */}
         <div className="sidebar-footer">
+          <div className="sidebar-user">
+            <div className="sidebar-avatar">
+              {user.name.trim().charAt(0).toUpperCase()}
+            </div>
+            <div className="sidebar-user-text">
+              <div className="sidebar-user-name">{user.name}</div>
+              <div className="sidebar-user-sub">{user.email}</div>
+            </div>
+          </div>
 
-          {/* SETTINGS */}
           <button
             type="button"
-            className={`nav-item ${
-              activeTab === "settings"
-                ? "active"
-                : ""
-            }`}
-            onClick={() => changeTab("settings")}
+            className={`nav-item ${activeTab === "settings" ? "active" : ""}`}
+            onClick={() => openSettings(null)}
           >
             <SettingsIcon size={17} />
             <span>Settings</span>
           </button>
 
-          {/* LOG OUT */}
-          <button
-            type="button"
-            className="nav-item logout-button"
-            onClick={handleSignOut}
-          >
+          <button type="button" className="nav-item logout-button" onClick={handleSignOut}>
             <LogOut size={17} />
             <span>Log Out</span>
           </button>
-
         </div>
-
       </aside>
 
-      {/* =====================================================
-          MAIN COLUMN
-      ===================================================== */}
-
       <div className="main-column">
-
-        {/* ===================================================
-            PAGE CONTENT
-        =================================================== */}
-
-        <main
-          className="content-area fade-in"
-          key={activeTab}
-        >
-
-          {/* OVERVIEW */}
-          {activeTab === "overview" && (
-            <Overview />
-          )}
-
-          {/* FINANCIAL PROFILE */}
-          {activeTab === "profile" && (
-            <MyProfile
-              onProfileSaved={() =>
-                setActiveTab("assistant")
-              }
+        <main className="content-area fade-in" key={`${activeTab}-${settingsModal}-${openConvId}`}>
+          {activeTab === "assistant" && (
+            <Assistant
+              user={user}
+              profileData={profileData}
+              onProfileUpdated={onProfileUpdated}
+              openConvId={openConvId}
             />
           )}
 
-          {/* ASSISTANT */}
-          {activeTab === "assistant" && (
-            <Assistant />
-          )}
-
-          {/* HISTORY */}
           {activeTab === "history" && (
-            <History />
+            <History
+              onOpenChat={(id) => {
+                setOpenConvId(id);
+                setActiveTab("assistant");
+              }}
+              onStartChat={() => {
+                setOpenConvId(null);
+                setActiveTab("assistant");
+              }}
+            />
           )}
 
-          {/* SETTINGS */}
           {activeTab === "settings" && (
             <Settings
+              user={user}
+              initialModal={settingsModal}
+              onUserUpdated={onUserUpdated}
               onSignOut={handleSignOut}
             />
           )}
-
         </main>
-
       </div>
-
     </div>
   );
 }
