@@ -1,27 +1,68 @@
 from typing import Any
+import re
 
 
-def chunk_text(
-    text: str,
-    chunk_size: int = 1000,
+def clean_text(text: str) -> str:
+    """
+    Clean extracted PDF text while preserving useful structure.
+    """
+
+    if not text:
+        return ""
+
+    # Normalize whitespace.
+    text = re.sub(r"[ \t]+", " ", text)
+
+    # Remove excessive blank lines.
+    text = re.sub(r"\n{3,}", "\n\n", text)
+
+    # Remove repeated page-number/footer patterns.
+    text = re.sub(
+        r"\n\d+\s+Reliance Industries Limited.*?(?=\n|$)",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    return text.strip()
+
+
+def split_into_blocks(text: str) -> list[str]:
+    """
+    Split text into logical blocks using blank lines.
+
+    This preserves paragraphs and table-related blocks better
+    than blindly slicing every N characters.
+    """
+
+    text = clean_text(text)
+
+    if not text:
+        return []
+
+    raw_blocks = re.split(r"\n\s*\n", text)
+
+    blocks = []
+
+    for block in raw_blocks:
+        block = block.strip()
+
+        if not block:
+            continue
+
+        blocks.append(block)
+
+    return blocks
+
+
+def combine_blocks(
+    blocks: list[str],
+    chunk_size: int = 1200,
     chunk_overlap: int = 200,
 ) -> list[str]:
     """
-    Split text into overlapping chunks.
-
-    Args:
-        text: Text to split.
-        chunk_size: Maximum approximate size of each chunk.
-        chunk_overlap: Number of characters shared between chunks.
-
-    Returns:
-        List of text chunks.
+    Combine logical blocks into chunks while preserving block boundaries.
     """
-
-    if not text or not text.strip():
-        return []
-
-    text = text.strip()
 
     if chunk_size <= 0:
         raise ValueError("chunk_size must be greater than 0.")
@@ -34,41 +75,86 @@ def chunk_text(
             "chunk_overlap must be smaller than chunk_size."
         )
 
+    if not blocks:
+        return []
+
     chunks = []
+    current_blocks = []
+    current_length = 0
 
-    start = 0
-    text_length = len(text)
+    for block in blocks:
 
-    while start < text_length:
-        end = min(start + chunk_size, text_length)
+        block_length = len(block)
 
-        chunk = text[start:end].strip()
+        # If adding the block would exceed the target,
+        # finalize the current chunk first.
+        if (
+            current_blocks
+            and current_length + block_length + 2 > chunk_size
+        ):
+            chunks.append(
+                "\n\n".join(current_blocks).strip()
+            )
 
-        if chunk:
-            chunks.append(chunk)
+            # Keep the last block as lightweight overlap.
+            overlap_blocks = []
 
-        if end >= text_length:
-            break
+            overlap_length = 0
 
-        start = end - chunk_overlap
+            for previous_block in reversed(current_blocks):
+                if overlap_length + len(previous_block) > chunk_overlap:
+                    break
+
+                overlap_blocks.insert(0, previous_block)
+                overlap_length += len(previous_block) + 2
+
+            current_blocks = overlap_blocks
+            current_length = overlap_length
+
+        current_blocks.append(block)
+        current_length += block_length + 2
+
+    if current_blocks:
+        chunks.append(
+            "\n\n".join(current_blocks).strip()
+        )
 
     return chunks
 
 
+def chunk_text(
+    text: str,
+    chunk_size: int = 1200,
+    chunk_overlap: int = 200,
+) -> list[str]:
+    """
+    Create structure-aware chunks from extracted PDF text.
+    """
+
+    blocks = split_into_blocks(text)
+
+    return combine_blocks(
+        blocks=blocks,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+    )
+
+
 def create_evidence_chunks(
     evidence_pages: list[dict[str, Any]],
-    chunk_size: int = 1000,
+    chunk_size: int = 1200,
     chunk_overlap: int = 200,
 ) -> list[dict[str, Any]]:
     """
-    Convert page-level financial evidence into RAG-ready chunks.
+    Create evidence chunks while preserving source metadata.
 
-    Metadata from the original page is preserved for every chunk.
+    Each chunk receives a globally unique chunk_id.
     """
 
     all_chunks = []
 
     for page_data in evidence_pages:
+
         text = page_data.get("text", "")
 
         chunks = chunk_text(
@@ -78,8 +164,14 @@ def create_evidence_chunks(
         )
 
         for chunk_index, chunk in enumerate(chunks):
+
             all_chunks.append(
                 {
+                    "chunk_id": (
+                        f"{page_data.get('file_name', 'document')}"
+                        f"_p{page_data.get('page')}"
+                        f"_c{chunk_index}"
+                    ),
                     "text": chunk,
                     "source": page_data.get("source"),
                     "date": page_data.get("date"),
