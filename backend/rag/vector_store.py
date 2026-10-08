@@ -16,11 +16,6 @@ class VectorStore:
         embeddings: list[list[float]],
         metadata: list[dict],
     ):
-        """
-        Add embeddings and their corresponding metadata
-        to the FAISS vector store.
-        """
-
         if len(embeddings) != len(metadata):
             raise ValueError(
                 "Number of embeddings must match number of metadata records."
@@ -48,9 +43,6 @@ class VectorStore:
         query_embedding: list[float],
         top_k: int = 5,
     ) -> list[dict]:
-        """
-        Search for the most semantically similar chunks.
-        """
 
         if self.index.ntotal == 0:
             return []
@@ -68,6 +60,7 @@ class VectorStore:
         results = []
 
         for score, index in zip(scores[0], indices[0]):
+
             if index == -1:
                 continue
 
@@ -84,9 +77,6 @@ class VectorStore:
         index_path: str = "data/faiss_index.index",
         metadata_path: str = "data/faiss_metadata.json",
     ):
-        """
-        Save FAISS index and metadata to disk.
-        """
 
         index_file = Path(index_path)
         metadata_file = Path(metadata_path)
@@ -106,6 +96,7 @@ class VectorStore:
             "w",
             encoding="utf-8",
         ) as file:
+
             json.dump(
                 self.metadata,
                 file,
@@ -118,9 +109,6 @@ class VectorStore:
         index_path: str = "data/faiss_index.index",
         metadata_path: str = "data/faiss_metadata.json",
     ):
-        """
-        Load a previously saved FAISS index and metadata.
-        """
 
         index_file = Path(index_path)
         metadata_file = Path(metadata_path)
@@ -144,4 +132,10 @@ class VectorStore:
             "r",
             encoding="utf-8",
         ) as file:
+
             self.metadata = json.load(file)
+
+        if self.index.ntotal != len(self.metadata):
+            raise ValueError(
+                "FAISS index and metadata count do not match."
+            )
