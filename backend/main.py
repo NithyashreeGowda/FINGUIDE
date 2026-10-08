@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import auth
-import profile
+import user_profile
 from database import init_indexes
 
 app = FastAPI(title="FinGuide API")
@@ -15,9 +15,9 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
-app.include_router(profile.router)
-app.include_router(profile.settings_router)
-app.include_router(profile.conv_router)
+app.include_router(user_profile.router)
+app.include_router(user_profile.settings_router)
+app.include_router(user_profile.conv_router)
 
 
 @app.on_event("startup")
