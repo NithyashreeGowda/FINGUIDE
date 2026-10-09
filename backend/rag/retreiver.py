@@ -15,11 +15,82 @@ class FinancialRetriever:
         self.embedding_model = embedding_model
         self.reranker = reranker or EvidenceReranker()
 
+    def _expand_query(self, query: str) -> str:
+        """
+        Expand broad financial queries with domain-specific
+        evidence terms before semantic retrieval.
+        """
+
+        intent = self.reranker._detect_intent(query)
+
+        expansion_terms = {
+            "financial_performance": [
+                "revenue from operations",
+                "profit before tax",
+                "profit after tax",
+                "EBITDA",
+                "segment revenue",
+                "segment results",
+                "consolidated financial statements",
+            ],
+            "profitability": [
+                "profit before tax",
+                "profit after tax",
+                "net profit",
+                "profit margin",
+                "EBITDA",
+                "return on equity",
+                "ROCE",
+            ],
+            "revenue": [
+                "revenue from operations",
+                "total revenue from operations",
+                "operating revenue",
+                "segment revenue",
+                "revenue growth",
+            ],
+            "cash_flow": [
+                "cash flow from operating activities",
+                "cash flow from investing activities",
+                "cash flow from financing activities",
+                "net cash generated",
+            ],
+            "debt": [
+                "total debt",
+                "net debt",
+                "borrowings",
+                "debt equity ratio",
+                "financial liabilities",
+            ],
+            "investment": [
+                "capital expenditure",
+                "capex",
+                "acquisition",
+                "investments",
+            ],
+            "dividend": [
+                "dividend per share",
+                "dividend paid",
+                "dividend proposed",
+                "dividend payout",
+            ],
+        }
+
+        terms = expansion_terms.get(
+            intent,
+            [],
+        )
+
+        if not terms:
+            return query
+
+        return f"{query} {' '.join(terms)}"
+
     def retrieve(
         self,
         query: str,
         top_k: int = 5,
-        candidate_k: int = 20,
+        candidate_k: int = 50,
         minimum_score: float = 0.50,
     ) -> list[dict]:
 
@@ -37,7 +108,12 @@ class FinancialRetriever:
                 "minimum_score must be between -1.0 and 1.0."
             )
 
-        query_embedding = self.embedding_model.encode_query(query)
+        # Expand the query before semantic retrieval.
+        retrieval_query = self._expand_query(query)
+
+        query_embedding = self.embedding_model.encode_query(
+            retrieval_query
+        )
 
         candidates = self.vector_store.search(
             query_embedding=query_embedding,

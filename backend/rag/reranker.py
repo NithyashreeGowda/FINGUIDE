@@ -10,7 +10,8 @@ class EvidenceReranker:
     2. Query keyword overlap
     3. Financial concept matching
     4. Query-intent matching
-    5. Noise penalty for weak evidence
+    5. Strong-evidence matching
+    6. Noise penalty for weak evidence
     """
 
     INTENT_TERMS = {
@@ -76,6 +77,74 @@ class EvidenceReranker:
             "dividends",
             "payout",
             "distribution",
+        },
+    }
+
+    # Strong evidence terms are more specific than generic
+    # words such as "growth", "income", or "revenue".
+    EVIDENCE_TERMS = {
+        "financial_performance": {
+            "revenue from operations",
+            "total revenue from operations",
+            "profit before tax",
+            "profit after tax",
+            "profit after tax after nci",
+            "consolidated financial statements",
+            "consolidated statement of profit and loss",
+            "segment revenue",
+            "segment result",
+            "segment results",
+            "ebitda",
+            "ebit",
+            "financial performance and review",
+        },
+        "profitability": {
+            "profit before tax",
+            "profit after tax",
+            "net profit",
+            "profit margin",
+            "net profit margin",
+            "return on equity",
+            "roce",
+            "return on capital employed",
+            "ebitda",
+        },
+        "revenue": {
+            "revenue from operations",
+            "total revenue from operations",
+            "operating revenue",
+            "segment revenue",
+            "revenue growth",
+            "sales revenue",
+        },
+        "cash_flow": {
+            "cash flow from operating activities",
+            "cash flow from investing activities",
+            "cash flow from financing activities",
+            "net cash generated",
+            "operating cash flow",
+        },
+        "debt": {
+            "total debt",
+            "net debt",
+            "borrowings",
+            "debt equity ratio",
+            "debt-equity ratio",
+            "financial liabilities",
+        },
+        "investment": {
+            "capital expenditure",
+            "capital expenditures",
+            "capex",
+            "acquisition",
+            "investments",
+            "investment in subsidiaries",
+        },
+        "dividend": {
+            "dividend per share",
+            "dividend paid",
+            "dividend proposed",
+            "dividend payout",
         },
     }
 
@@ -153,7 +222,6 @@ class EvidenceReranker:
 
         query_text = self._normalize_text(query)
 
-        # Check multi-word phrases first.
         if any(
             phrase in query_text
             for phrase in [
@@ -218,7 +286,6 @@ class EvidenceReranker:
         if "dividend" in query_text:
             return "dividend"
 
-        # Generic financial query fallback.
         return "financial_performance"
 
     def _keyword_score(
@@ -257,14 +324,43 @@ class EvidenceReranker:
         if not expected_terms:
             return 0.0
 
-        # Cap the score so several repeated occurrences
-        # do not dominate the ranking.
         score = matched_terms / min(
             max(len(expected_terms) * 0.30, 1),
             len(expected_terms),
         )
 
         return min(score, 1.0)
+
+    def _evidence_score(
+        self,
+        query: str,
+        evidence_text: str,
+    ) -> float:
+        """
+        Measures whether the evidence contains specific
+        financial-result phrases relevant to the query intent.
+        """
+
+        intent = self._detect_intent(query)
+        evidence_text = self._normalize_text(evidence_text)
+
+        expected_terms = self.EVIDENCE_TERMS.get(
+            intent,
+            set(),
+        )
+
+        if not expected_terms:
+            return 0.0
+
+        matched_terms = [
+            term
+            for term in expected_terms
+            if term in evidence_text
+        ]
+
+        # Strong evidence is capped at 1.0.
+        # Multiple specific financial phrases increase confidence.
+        return min(len(matched_terms) / 3.0, 1.0)
 
     def _noise_score(
         self,
@@ -282,7 +378,6 @@ class EvidenceReranker:
             if phrase in evidence_text:
                 matches += 1
 
-        # More than three noise phrases means strong noise.
         return min(matches / 3.0, 1.0)
 
     def rerank(
@@ -290,9 +385,10 @@ class EvidenceReranker:
         query: str,
         candidates: list[dict],
         top_k: int = 5,
-        semantic_weight: float = 0.55,
+        semantic_weight: float = 0.45,
         keyword_weight: float = 0.10,
-        intent_weight: float = 0.30,
+        intent_weight: float = 0.20,
+        evidence_weight: float = 0.20,
         noise_penalty_weight: float = 0.05,
     ) -> list[dict]:
 
@@ -306,6 +402,7 @@ class EvidenceReranker:
             semantic_weight
             + keyword_weight
             + intent_weight
+            + evidence_weight
             + noise_penalty_weight
         )
 
@@ -337,6 +434,11 @@ class EvidenceReranker:
                 evidence_text,
             )
 
+            evidence_score = self._evidence_score(
+                query,
+                evidence_text,
+            )
+
             noise_score = self._noise_score(
                 evidence_text,
             )
@@ -345,6 +447,7 @@ class EvidenceReranker:
                 semantic_weight * semantic_score
                 + keyword_weight * keyword_score
                 + intent_weight * intent_score
+                + evidence_weight * evidence_score
                 - noise_penalty_weight * noise_score
             )
 
@@ -353,6 +456,7 @@ class EvidenceReranker:
             result["semantic_score"] = semantic_score
             result["keyword_score"] = keyword_score
             result["intent_score"] = intent_score
+            result["evidence_score"] = evidence_score
             result["noise_score"] = noise_score
             result["rerank_score"] = rerank_score
             result["detected_intent"] = self._detect_intent(
