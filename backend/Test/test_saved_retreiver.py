@@ -55,6 +55,7 @@ for index, result in enumerate(results, start=1):
     print("FAISS similarity:", result["semantic_score"])
     print("Keyword score:", result["keyword_score"])
     print("Intent score:", result["intent_score"])
+    print(f"Evidence score: {result['evidence_score']}")
     print("Noise score:", result["noise_score"])
     print("Final rerank score:", result["rerank_score"])
 
