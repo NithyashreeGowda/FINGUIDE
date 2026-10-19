@@ -99,9 +99,10 @@ def rag_query(request: RAGRequest):
         for result in results:
             item = dict(result)
 
-            # Preserve the existing metadata fallback behavior.
-            if "date" not in item:
-                item["date"] = date.today()
+            
+            # Preserve unknown dates instead of treating evidence as current.
+            if not item.get("date"):
+                item["date"] = None
 
             if "document_type" not in item:
                 item["document_type"] = (

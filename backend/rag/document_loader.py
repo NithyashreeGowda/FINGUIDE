@@ -74,8 +74,11 @@ def load_financial_document(
             "financial_document",
         )
 
-    if document_date is None:
-        document_date = datetime.now().date().isoformat()
+    # Keep the date unknown if it was not provided.
+    # Do not assume that the document was published today.
+    if document_date is not None:
+        document_date = str(document_date).strip() or None
+
 
     evidence = []
 
