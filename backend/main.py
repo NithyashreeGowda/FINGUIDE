@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from market_news import router as news_router, start_news_worker
 try:
     from rag.rag_api import router as rag_router
 except Exception as e:
@@ -10,8 +9,9 @@ import auth
 import user_profile
 from database import init_indexes
 from market_insights import router as insights_router, start_insights_worker
-from market_news import _db, _now
+from market_news import router as news_router, start_news_worker, _db, _now
 from history_tools import router as history_tools_router
+
 app = FastAPI(title="FinGuide API")
 
 app.add_middleware(
@@ -32,10 +32,6 @@ if rag_router:
     app.include_router(rag_router)
 
 
-@app.on_event("startup")
-def startup():
-    init_indexes()
-    start_news_worker()
 @app.on_event("startup")
 def startup():
     init_indexes()

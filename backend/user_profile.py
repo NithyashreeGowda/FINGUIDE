@@ -1,4 +1,4 @@
-"""Create / read / update the signed-in user's financial profile.
+"""Create, read, and update the signed-in user's financial profile.
 Also holds the user's Settings (dark mode) and chat History (conversations)."""
 from datetime import datetime, timezone
 from typing import Literal, Optional
