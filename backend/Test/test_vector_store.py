@@ -13,7 +13,13 @@ from rag.vector_store import VectorStore
 
 # 1. Load the financial document
 document = load_financial_document(
-    str(BACKEND_DIR / "data" / "financial_documents" / "Reliance-2024-25.pdf"),
+    str(
+        BACKEND_DIR
+        / "data"
+        / "financial_documents"
+        / "incoming"
+        / "RELIANCE_2024_2025.pdf"
+    ),
     source="Reliance Industries Limited Annual Report 2024-25",
     company="Reliance Industries Limited",
     document_type="annual_report",

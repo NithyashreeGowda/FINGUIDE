@@ -11,7 +11,13 @@ from rag.document_loader import load_financial_document
 from rag.chunker import create_evidence_chunks
 
 
-PDF_PATH = BACKEND_DIR / "data" / "financial_documents" / "Reliance-2024-25.pdf"
+PDF_PATH = (
+    BACKEND_DIR
+    / "data"
+    / "financial_documents"
+    / "incoming"
+    / "RELIANCE_2024_2025.pdf"
+)
 
 
 document = load_financial_document(
@@ -66,4 +72,3 @@ for page in sorted(TARGET_PAGES):
         print("-" * 80)
 
         print(chunk["text"])
-
