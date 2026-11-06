@@ -92,6 +92,11 @@ class FinancialRetriever:
         top_k: int = 5,
         candidate_k: int = 50,
         minimum_score: float = 0.50,
+        company: str | None = None,
+        symbol: str | None = None,
+        financial_year: str | None = None,
+        document_type: str | None = None,
+        scope: str | None = None,
     ) -> list[dict]:
 
         if not query or not query.strip():
@@ -111,6 +116,18 @@ class FinancialRetriever:
         # Expand the query before semantic retrieval.
         retrieval_query = self._expand_query(query)
 
+        metadata_filters = {
+            key: value
+            for key, value in {
+                "company": company,
+                "symbol": symbol,
+                "financial_year": financial_year,
+                "document_type": document_type,
+                "scope": scope,
+            }.items()
+            if value is not None
+        }
+
         query_embedding = self.embedding_model.encode_query(
             retrieval_query
         )
@@ -118,6 +135,7 @@ class FinancialRetriever:
         candidates = self.vector_store.search(
             query_embedding=query_embedding,
             top_k=candidate_k,
+            metadata_filters=metadata_filters,
         )
 
         filtered_candidates = [

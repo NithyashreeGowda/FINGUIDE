@@ -20,6 +20,29 @@ class VectorStore:
         self.index = faiss.IndexFlatIP(dimension)
         self.metadata = []
 
+    @staticmethod
+    def _normalize_filter_value(field: str, value: Any) -> str:
+        normalized = str(value).strip().casefold()
+        if field == "financial_year":
+            normalized = normalized.replace("financial year", "").strip()
+            normalized = normalized.removeprefix("fy").strip()
+            normalized = normalized.replace(" ", "").replace("/", "-")
+        return normalized
+
+    @classmethod
+    def _matches_metadata_filters(
+        cls,
+        record: dict,
+        metadata_filters: dict[str, Any],
+    ) -> bool:
+        for field, expected in metadata_filters.items():
+            actual = record.get(field)
+            if actual is None:
+                return False
+            if cls._normalize_filter_value(field, actual) != cls._normalize_filter_value(field, expected):
+                return False
+        return True
+
     def add_embeddings(
         self,
         embeddings: list[list[float]],
@@ -68,6 +91,7 @@ class VectorStore:
         self,
         query_embedding: list[float],
         top_k: int = 5,
+        metadata_filters: dict[str, Any] | None = None,
     ) -> list[dict]:
         """
         Retrieve the most relevant evidence chunks
@@ -84,6 +108,23 @@ class VectorStore:
 
         if self.index.ntotal == 0:
             return []
+
+        metadata_filters = metadata_filters or {}
+        supported_filters = {
+            "company",
+            "symbol",
+            "financial_year",
+            "document_type",
+            "scope",
+        }
+        unsupported_filters = set(metadata_filters) - supported_filters
+        if unsupported_filters:
+            raise ValueError(
+                "Unsupported metadata filters: "
+                + ", ".join(sorted(unsupported_filters))
+            )
+        if any(value is None or not str(value).strip() for value in metadata_filters.values()):
+            raise ValueError("Metadata filter values must be non-empty.")
 
         query_vector = np.asarray(
             query_embedding,
@@ -108,24 +149,28 @@ class VectorStore:
 
         query_vector = query_vector.reshape(1, -1)
 
-        scores, indices = self.index.search(
-            query_vector,
-            min(top_k, self.index.ntotal),
-        )
+        search_k = min(top_k, self.index.ntotal)
+        while True:
+            scores, indices = self.index.search(query_vector, search_k)
+            results = []
 
-        results = []
+            for score, index in zip(scores[0], indices[0]):
+                if index == -1:
+                    continue
+                record = self.metadata[index]
+                if not self._matches_metadata_filters(record, metadata_filters):
+                    continue
+                result = record.copy()
+                result["score"] = float(score)
+                results.append(result)
 
-        for score, index in zip(scores[0], indices[0]):
-
-            if index == -1:
-                continue
-
-            result = self.metadata[index].copy()
-            result["score"] = float(score)
-
-            results.append(result)
-
-        return results
+            if (
+                len(results) >= top_k
+                or search_k >= self.index.ntotal
+                or not metadata_filters
+            ):
+                return results[:top_k]
+            search_k = min(self.index.ntotal, max(search_k * 2, top_k))
 
     def save(
         self,

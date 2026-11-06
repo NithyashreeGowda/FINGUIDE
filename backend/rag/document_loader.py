@@ -277,6 +277,13 @@ def load_financial_document(
     document_type: str | None = None,
     document_date: str | None = None,
     source_url: str | None = None,
+    symbol: str | None = None,
+    financial_year: str | None = None,
+    reporting_period: str | None = None,
+    scope: str | None = None,
+    publication_date: str | None = None,
+    source_organization: str | None = None,
+    verification_status: str | None = None,
 ) -> dict:
     """
     Load a financial document and attach structured evidence metadata.
@@ -313,9 +320,19 @@ def load_financial_document(
     ingestion_timestamp = datetime.now(timezone.utc).isoformat()
     document_source = source or path.name
 
+    preserved_metadata = {
+        "symbol": symbol,
+        "financial_year": financial_year,
+        "reporting_period": reporting_period,
+        "scope": scope,
+        "publication_date": publication_date,
+        "source_organization": source_organization,
+        "verification_status": verification_status,
+    }
+
     evidence = []
     for page_data in pages:
-        evidence.append({
+        record = {
             "text": page_data["text"],
             "source": document_source,
             "source_url": source_url,
@@ -326,9 +343,15 @@ def load_financial_document(
             "file_name": path.name,
             "document_id": document_id,
             "ingestion_timestamp": ingestion_timestamp,
+        }
+        record.update({
+            key: value
+            for key, value in preserved_metadata.items()
+            if value is not None
         })
+        evidence.append(record)
 
-    return {
+    result = {
         "file_name": path.name,
         "source": document_source,
         "source_url": source_url,
@@ -340,3 +363,9 @@ def load_financial_document(
         "page_count": len(pages),
         "evidence": evidence,
     }
+    result.update({
+        key: value
+        for key, value in preserved_metadata.items()
+        if value is not None
+    })
+    return result

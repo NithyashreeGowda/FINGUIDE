@@ -110,6 +110,15 @@ def create_evidence_chunks(
 
     all_chunks: list[dict[str, Any]] = []
     seen_chunk_ids: set[str] = set()
+    preserved_metadata = (
+        "symbol",
+        "financial_year",
+        "reporting_period",
+        "scope",
+        "publication_date",
+        "source_organization",
+        "verification_status",
+    )
 
     for page_data in evidence_pages:
         if not isinstance(page_data, dict):
@@ -134,22 +143,26 @@ def create_evidence_chunks(
                 continue
             seen_chunk_ids.add(chunk_id)
 
-            all_chunks.append(
-                {
-                    "chunk_id": chunk_id,
-                    "text": chunk,
-                    "source": page_data.get("source"),
-                    "date": page_data.get("date"),
-                    "company": page_data.get("company"),
-                    "document_type": page_data.get("document_type"),
-                    "page": page_data.get("page"),
-                    "file_name": page_data.get("file_name"),
-                    "chunk_index": chunk_index,
-                    "source_url": page_data.get("source_url"),
-                    "document_id": page_data.get("document_id"),
-                    "ingestion_timestamp": page_data.get("ingestion_timestamp"),
-                }
-            )
+            evidence_chunk = {
+                "chunk_id": chunk_id,
+                "text": chunk,
+                "source": page_data.get("source"),
+                "date": page_data.get("date"),
+                "company": page_data.get("company"),
+                "document_type": page_data.get("document_type"),
+                "page": page_data.get("page"),
+                "file_name": page_data.get("file_name"),
+                "chunk_index": chunk_index,
+                "source_url": page_data.get("source_url"),
+                "document_id": page_data.get("document_id"),
+                "ingestion_timestamp": page_data.get("ingestion_timestamp"),
+            }
+            evidence_chunk.update({
+                key: page_data[key]
+                for key in preserved_metadata
+                if key in page_data
+            })
+            all_chunks.append(evidence_chunk)
 
     return all_chunks
     

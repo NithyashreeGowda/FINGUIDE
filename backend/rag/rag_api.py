@@ -25,6 +25,11 @@ class RAGRequest(BaseModel):
     query: str = Field(..., min_length=3)
     claim: str | None = None
     metric: str | None = None
+    company: str | None = None
+    symbol: str | None = None
+    financial_year: str | None = None
+    document_type: str | None = None
+    scope: str | None = None
     top_k: int = Field(default=5, ge=1, le=20)
 
     # Configurable evidence freshness policy.
@@ -149,6 +154,11 @@ def rag_query(request: RAGRequest):
         results = retriever.retrieve(
             query=request.query,
             top_k=request.top_k,
+            company=request.company,
+            symbol=request.symbol,
+            financial_year=request.financial_year,
+            document_type=request.document_type,
+            scope=request.scope,
         )
 
         if not results:
