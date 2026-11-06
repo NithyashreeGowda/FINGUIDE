@@ -15,14 +15,18 @@ METADATA_PATH = BACKEND_DIR / "data" / "faiss_metadata.json"
 
 # Add each PDF here with its correct metadata.
 # Dates should be the report/publication date, not the download date.
+
 DOCUMENTS = [
     {
         "file_name": "Reliance-2024-25.pdf",
         "source": "Reliance Industries Limited Annual Report 2024-25",
+        "source_url": "https://www.ril.com/",
         "company": "Reliance Industries Limited",
         "document_type": "annual_report",
         "document_date": "2025-03-31",
     },
+
+
 
     # Example for another PDF:
     # {
@@ -59,6 +63,7 @@ def main():
                 company=config["company"],
                 document_type=config["document_type"],
                 document_date=config["document_date"],
+                source_url=config.get("source_url"),
             )
 
             chunks = create_evidence_chunks(

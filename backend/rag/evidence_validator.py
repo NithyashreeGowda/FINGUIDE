@@ -2,6 +2,27 @@ from datetime import date, datetime
 from typing import Any
 import re
 
+
+def _parse_date(value: Any) -> date | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if not isinstance(value, str):
+        value = str(value)
+    value = value.strip()
+    if not value:
+        return None
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%Y/%m/%d", "%d/%m/%Y", "%Y-%m"):
+        try:
+            return datetime.strptime(value, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
 class EvidenceValidator:
     """
     Validates financial evidence before it is used by the
@@ -16,63 +37,47 @@ class EvidenceValidator:
     ]
 
     def __init__(self, freshness_days: int = 365):
-        """
-        freshness_days:
-            Configurable threshold used to classify evidence as fresh/stale.
-            This is not a universal financial rule.
-        """
         if freshness_days <= 0:
             raise ValueError("freshness_days must be greater than 0.")
-
         self.freshness_days = freshness_days
 
     def validate_metadata(self, evidence: dict[str, Any]) -> dict[str, Any]:
-        """
-        Check whether the evidence contains the metadata required
-        by the financial evidence pipeline.
-        """
-
         missing_fields = []
-
         for field in self.REQUIRED_FIELDS:
             value = evidence.get(field)
-
             if value is None or str(value).strip() == "":
                 missing_fields.append(field)
+        return {"valid": len(missing_fields) == 0, "missing_fields": missing_fields}
 
-        return {
-            "valid": len(missing_fields) == 0,
-            "missing_fields": missing_fields,
-        }
-
-    def calculate_freshness(self, document_date: str) -> dict[str, Any]:
-        """
-        Calculate how old the evidence is.
-
-        The result is descriptive. It does not automatically mean
-        that old evidence is unreliable.
-        """
-
-        try:
-            parsed_date = datetime.strptime(
-                document_date,
-                "%Y-%m-%d",
-            ).date()
-        except (ValueError, TypeError):
+    def calculate_freshness(self, document_date: str | date | datetime | None) -> dict[str, Any]:
+        parsed = _parse_date(document_date)
+        if parsed is None:
             return {
                 "valid_date": False,
                 "age_days": None,
+                "age_months": None,
                 "is_fresh": False,
+                "is_historical": False,
+                "is_future": False,
+                "status": "unknown_date",
             }
 
         today = date.today()
+        age_days = (today - parsed).days
+        age_months = max(0.0, age_days / 30.4375)
 
-        age_days = (today - parsed_date).days
+        is_future = parsed > today
+        is_historical = age_days > self.freshness_days
+        is_fresh = (not is_future) and (not is_historical)
 
         return {
             "valid_date": True,
             "age_days": age_days,
-            "is_fresh": age_days <= self.freshness_days,
+            "age_months": round(age_months, 2),
+            "is_fresh": is_fresh,
+            "is_historical": is_historical,
+            "is_future": is_future,
+            "status": "future" if is_future else "fresh" if is_fresh else "historical",
         }
 
     def calculate_relevance(
@@ -80,68 +85,31 @@ class EvidenceValidator:
         similarity_score: float | None,
         minimum_score: float = 0.50,
     ) -> dict[str, Any]:
-        """
-        Evaluate retrieval relevance using the similarity score
-        returned by the vector retriever.
-        """
-
         if similarity_score is None:
-            return {
-                "score_available": False,
-                "is_relevant": False,
-            }
-
+            return {"score_available": False, "is_relevant": False}
         score = float(similarity_score)
-
-        return {
-            "score_available": True,
-            "similarity_score": score,
-            "is_relevant": score >= minimum_score,
-        }
+        return {"score_available": True, "similarity_score": score, "is_relevant": score >= minimum_score}
 
     def validate_evidence(
         self,
         evidence: dict[str, Any],
         minimum_similarity: float = 0.50,
     ) -> dict[str, Any]:
-        """
-        Run all basic evidence validation checks.
-        """
-
         metadata_result = self.validate_metadata(evidence)
-
-        freshness_result = {
-            "valid_date": False,
-            "age_days": None,
-            "is_fresh": False,
-        }
+        freshness_result = {"valid_date": False, "age_days": None, "age_months": None, "is_fresh": False, "is_historical": False, "is_future": False, "status": "unknown_date"}
 
         if evidence.get("date"):
-            freshness_result = self.calculate_freshness(
-                evidence["date"]
-            )
+            freshness_result = self.calculate_freshness(evidence["date"])
 
-        relevance_result = self.calculate_relevance(
-            evidence.get("score"),
-            minimum_score=minimum_similarity,
-        )
+        relevance_result = self.calculate_relevance(evidence.get("score"), minimum_score=minimum_similarity)
 
         validation_errors = []
-
         if not metadata_result["valid"]:
-            validation_errors.append(
-                "Missing required evidence metadata."
-            )
-
+            validation_errors.append("Missing required evidence metadata.")
         if not freshness_result["valid_date"]:
-            validation_errors.append(
-                "Evidence date is missing or invalid."
-            )
-
+            validation_errors.append("Evidence date is missing or invalid.")
         if not relevance_result["score_available"]:
-            validation_errors.append(
-                "Retrieval similarity score is unavailable."
-            )
+            validation_errors.append("Retrieval similarity score is unavailable.")
 
         return {
             "metadata": metadata_result,
@@ -150,7 +118,6 @@ class EvidenceValidator:
             "validation_errors": validation_errors,
             "valid": len(validation_errors) == 0,
         }
-   
 
 
 def normalize_text(text: str) -> str:

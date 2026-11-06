@@ -10,6 +10,9 @@ from .vector_store import VectorStore
 from .reranker import EvidenceReranker
 from .retreiver import FinancialRetriever
 from .evidence_validator import validate_evidence
+from .financial_calculator import calculate_metric
+from .market_data import fetch_stock_quote
+from .source_registry import FinancialSourceRegistry
 
 
 router = APIRouter(
@@ -36,6 +39,26 @@ class RAGResponse(BaseModel):
     query: str
     evidence: list[dict[str, Any]]
     validation: dict[str, Any]
+
+
+class CalculationRequest(BaseModel):
+    metric: str = Field(..., min_length=1)
+    values: dict[str, float | int | str] = Field(default_factory=dict)
+
+
+class CalculationResponse(BaseModel):
+    metric: str
+    result: dict[str, Any]
+
+
+class MarketQuoteRequest(BaseModel):
+    ticker: str = Field(..., min_length=1)
+    exchange: str | None = None
+    provider: str | None = None
+
+
+class CompanyListResponse(BaseModel):
+    companies: list[dict[str, Any]]
 
 
 def _json_safe(value):
@@ -77,6 +100,46 @@ retriever = FinancialRetriever(
     embedding_model=embedding_model,
     reranker=reranker,
 )
+
+source_registry = FinancialSourceRegistry()
+
+
+@router.get("/status")
+def rag_status():
+    return {
+        "vector_count": vector_store.index.ntotal,
+        "metadata_count": len(vector_store.metadata),
+        "embedding_dimension": embedding_model.embedding_dimension,
+    }
+
+
+@router.get("/companies", response_model=CompanyListResponse)
+def list_companies():
+    try:
+        return {"companies": source_registry.list_companies()}
+    except Exception:
+        return {"companies": []}
+
+
+@router.post("/calculate", response_model=CalculationResponse)
+def calculate_financial_metric(request: CalculationRequest):
+    try:
+        result = calculate_metric(request.metric, **request.values)
+        return {"metric": request.metric, "result": result}
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/market/quote", response_model=dict[str, Any])
+def fetch_market_quote(request: MarketQuoteRequest):
+    try:
+        return fetch_stock_quote(
+            request.ticker,
+            exchange=request.exchange,
+            provider=request.provider,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/query", response_model=RAGResponse)
