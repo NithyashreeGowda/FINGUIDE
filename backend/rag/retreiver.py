@@ -90,7 +90,7 @@ class FinancialRetriever:
         self,
         query: str,
         top_k: int = 5,
-        candidate_k: int = 50,
+        candidate_k: int = 250,
         minimum_score: float = 0.50,
         company: str | None = None,
         symbol: str | None = None,
