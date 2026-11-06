@@ -406,11 +406,7 @@ export default function History({ onOpenAssistant }) {
             )}
           </div>
 
-          <span className="hp-count">
-            {rows.length === conversations.length
-              ? plural(conversations.length, "chat")
-              : `${rows.length} of ${conversations.length} chats`}
-          </span>
+          
 
           <button
             className="hp-icon"
@@ -610,7 +606,7 @@ export default function History({ onOpenAssistant }) {
                 </button>
               </div>
 
-              {chat && (
+              {tab === "chat" && (
                 <div className="hp-reader-actions">
                   <button className="hp-btn hp-ghost" onClick={copyChat}>
                     {copied ? <Check size={15} /> : <Copy size={15} />}

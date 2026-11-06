@@ -15,7 +15,6 @@ import History from "../components/History";
 import Settings from "../components/Settings";
 import MarketNews from "../pages/MarketNews";
 import MarketInsights from "../pages/MarketInsights";
-import Finn from "../components/Finn";
 const NAV_ITEMS = [
   { id: "assistant", label: "Assistant", icon: MessageSquare },
   { id: "history", label: "History", icon: HistoryIcon },
@@ -90,14 +89,7 @@ export default function MainApp({
           ))}
         </nav>
         
-        <Finn
-          tab={activeTab}
-          userName={user.name.trim().split(" ")[0]}
-          onNavigate={(id) => {
-            setOpenConvId(null);
-            setActiveTab(id);
-          }}
-        />
+        
 
         <div className="sidebar-footer">
           <div className="sidebar-user">
