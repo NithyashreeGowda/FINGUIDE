@@ -69,3 +69,80 @@ export const verifySignup = (body) => request("/auth/verify-signup", { method: "
 export const resendOtp = (body) => request("/auth/resend-otp", { method: "POST", body });
 export const forgotPassword = (body) => request("/auth/forgot-password", { method: "POST", body });
 export const resetPassword = (body) => request("/auth/reset-password", { method: "POST", body });
+export async function fetchNews({ category, region, limit = 60 } = {}) {
+  const p = new URLSearchParams({ limit });
+  if (category && category !== "All") p.set("category", category);
+  if (region && region !== "All") p.set("region", region);
+  const res = await fetch(`${API_BASE}/api/news?${p}`);
+  if (!res.ok) throw new Error("Could not load news.");
+  return res.json();
+}
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+export async function fetchInsights() {
+  const res = await fetch(`${API_BASE}/api/insights`);
+  if (!res.ok) throw new Error("Could not load market data.");
+  return res.json();
+}
+// ---- History feature endpoints ----
+
+export const getHistorySummary = (id) =>
+  request(
+    `/history-tools/summary/${encodeURIComponent(id)}`
+  );
+
+export const saveHistorySummary = (id, summary) =>
+  request(
+    `/history-tools/summary/${encodeURIComponent(id)}`,
+    {
+      method: "PUT",
+      body: summary,
+    }
+  );
+
+export const getKnowledgeMap = () =>
+  request("/history-tools/knowledge-map");
+export const getHistoryPreviews = () =>
+  request("/history-tools/previews");
+
+export async function downloadHistoryExport({
+  scope = "all",
+  format = "pdf",
+  conversationId = null,
+} = {}) {
+  const params = new URLSearchParams({ scope, format });
+
+  if (conversationId) {
+    params.set("conversation_id", conversationId);
+  }
+
+  const token = getToken();
+
+  let response;
+
+  try {
+    response = await fetch(
+      `${BASE}/history-tools/export?${params.toString()}`,
+      {
+        headers: token
+          ? { Authorization: `Bearer ${token}` }
+          : {},
+      }
+    );
+  } catch {
+    throw new ApiError(
+      "Can't reach the server. Is the backend running?",
+      0
+    );
+  }
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+
+    throw new ApiError(
+      data?.detail || `Export failed (${response.status})`,
+      response.status
+    );
+  }
+
+  return response.blob();
+}

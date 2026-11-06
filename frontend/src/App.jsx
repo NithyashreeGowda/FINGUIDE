@@ -21,12 +21,18 @@ export default function App() {
   };
 
   const handleAuth = async ({ token, user: u }) => {
-    setToken(token);
-    syncLocal(u);
-    setUser(u);
-    applyTheme(await fetchSettings().catch(() => null));
-    setProfileData(await fetchProfile().catch(() => null));
-  };
+  setToken(token);
+  syncLocal(u);
+
+  const [settings, profile] = await Promise.all([
+    fetchSettings().catch(() => null),
+    fetchProfile().catch(() => null),
+  ]);
+
+  applyTheme(settings);
+  setProfileData(profile);
+  setUser(u);
+};
 
   const handleSignOut = () => {
     clearToken();

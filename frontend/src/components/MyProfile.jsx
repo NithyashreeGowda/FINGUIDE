@@ -165,10 +165,7 @@ export default function MyProfile({ initial = null, onSaved, onBack }) {
       <div className="fp-head">
         <div>
           <h1>Financial Profile</h1>
-          <p>
-            Your financial information helps us provide personalized
-            recommendations and guidance.
-          </p>
+          
         </div>
 
         <button type="button" className="btn-outline fp-back" onClick={onBack}>
@@ -177,32 +174,7 @@ export default function MyProfile({ initial = null, onSaved, onBack }) {
       </div>
 
       {/* PROFILE STATUS BAR + SAVE */}
-      <div className="fp-status">
-        <div className="fp-status-main">
-          <div className="fp-status-top">
-            <span>Profile status</span>
-            <strong>{completeness}% complete</strong>
-          </div>
-          <div className="fp-bar">
-            <div style={{ width: `${completeness}%` }} />
-          </div>
-        </div>
-
-        <span className={`fp-pill ${completeness === 100 ? "ok" : "warn"}`}>
-          {completeness === 100 ? "Ready for recommendations" : "Needs information"}
-        </span>
-
-        <button
-          type="button"
-          className="profile-save-btn"
-          onClick={handleSave}
-          disabled={loading}
-        >
-          <Save size={16} />
-          {loading ? "Saving..." : "Save Changes"}
-        </button>
-      </div>
-
+      
       {message && (
         <div className={`profile-message ${message.type}`}>
           <AlertCircle size={16} />
@@ -295,6 +267,17 @@ export default function MyProfile({ initial = null, onSaved, onBack }) {
           )}
         </section>
       )}
+      <div className="fp-footer">
+        <button
+          type="button"
+          className="profile-save-btn"
+          onClick={handleSave}
+          disabled={loading}
+        >
+          <Save size={16} />
+          {loading ? "Saving..." : "Save Changes"}
+        </button>
+      </div>
 
     </div>
   );

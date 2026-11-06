@@ -103,44 +103,31 @@ export default function Assistant({ user, profileData, onProfileUpdated, openCon
       {/* TITLE + GREETING BOX + RECOMMENDATION */}
       <div className={`assistant-welcome ${messages.length > 0 ? "has-chat" : ""}`}>
 
-        <h1>Financial Assistant</h1>
-
-        <p>
-          Your personalized financial companion for questions,
-          analysis, and investment guidance.
-        </p>
 
         <div className="assistant-greeting">
-          <div className="greet-card">
-            <div className="greet-text">
-              <h2>{greeting()}, {firstName}</h2>
-              <p>Welcome back. Let’s pick up where we left off.</p>
-            </div>
+  <h2>{greeting()}, {firstName}</h2>
 
-            <div className="greet-profile">
-              <div className="greet-ring" style={{ "--p": completeness }}>
-                <span>{completeness}%</span>
-              </div>
+  <div className="assistant-profile-status">
+    <span className="profile-status-text">
+      <CheckCircle2 size={15} />
+      {ready
+        ? "Financial context complete"
+        : context.status === "CONFLICTING_CONTEXT"
+        ? "Context needs review"
+        : "More information needed"}
+    </span>
 
-              <div className="greet-profile-text">
-                <strong>Financial profile</strong>
-                <span className={ready ? "ok" : "warn"}>
-                  {ready
-                    ? "Financial context complete"
-                    : context.status === "CONFLICTING_CONTEXT"
-                    ? "Context needs review"
-                    : "More information needed"}
-                </span>
-              </div>
+    <button
+      type="button"
+      className="btn-outline"
+      onClick={openEditor}
+    >
+      Edit profile
+    </button>
+  </div>
 
-              <button type="button" className="btn-outline" onClick={openEditor}>
-                Edit profile
-              </button>
-            </div>
-          </div>
-
-          {!ready && <ContextStatus context={context} onEdit={openEditor} />}
-        </div>
+  {!ready && <ContextStatus context={context} onEdit={openEditor} />}
+</div>
 
         {!ready ? (
           <div className="assistant-profile-prompt">
