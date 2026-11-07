@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "companies": {
+    "reliance": {
+      "company_id": "reliance",
+      "name": "Reliance Industries Ltd.",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "country": "India",
+      "sector": null,
+      "official_website": "https://www.ril.com/",
+      "investor_relations_url": "https://www.ril.com/investors",
+      "filing_source_urls": [
+        "https://nsearchives.nseindia.com/annual_reports/AR_27322_RELIANCE_2024_2025_A_07082025114457.pdf"
+      ],
+      "document_categories": [
+        "annual_report"
+      ]
+    },
+    "tcs": {
+      "company_id": "tcs",
+      "name": "Tata Consultancy Services Ltd.",
+      "symbol": "TCS",
+      "exchange": "NSE",
+      "country": "India",
+      "sector": null,
+      "official_website": "https://www.tcs.com/",
+      "investor_relations_url": "https://www.tcs.com/investor-relations",
+      "filing_source_urls": [
+        "https://www.ar.tcs.com/files/TCS_Annual_Report_2025-26.pdf"
+      ],
+      "document_categories": [
+        "annual_report"
+      ]
+    },
+    "infy": {
+      "company_id": "infy",
+      "name": "Infosys Ltd.",
+      "symbol": "INFY",
+      "exchange": "NSE",
+      "country": "India",
+      "sector": null,
+      "official_website": "https://www.infosys.com/",
+      "investor_relations_url": "https://www.infosys.com/investors/reports-filings/annual-report.html",
+      "filing_source_urls": [
+        "https://www.infosys.com/investors/reports-filings/annual-report/annual/documents/infosys-ar-26.pdf"
+      ],
+      "document_categories": [
+        "annual_report"
+      ]
+    }
+  },
+  "sources": {
+    "4685be412f9e17096ec8439c319c0b36abdee71c22dd5d21dcc2bf98cdd30b9e": {
+      "source_id": "4685be412f9e17096ec8439c319c0b36abdee71c22dd5d21dcc2bf98cdd30b9e",
+      "company_id": "reliance",
+      "url": "https://nsearchives.nseindia.com/annual_reports/AR_27322_RELIANCE_2024_2025_A_07082025114457.pdf",
+      "source_type": "official_exchange",
+      "label": "Reliance Industries Limited Annual Report 2024-25 (NSE archive)",
+      "verification_status": "verified",
+      "verified_by": "NSE archival PDF; local SHA-256 verified on 2026-11-06"
+    },
+    "50522c070333eb7a226f93bf3b92475b9dee5dd3a60d43c40529089b4e3cbe1f": {
+      "source_id": "50522c070333eb7a226f93bf3b92475b9dee5dd3a60d43c40529089b4e3cbe1f",
+      "company_id": "tcs",
+      "url": "https://www.ar.tcs.com/files/TCS_Annual_Report_2025-26.pdf",
+      "source_type": "company_ir",
+      "label": "Tata Consultancy Services Integrated Annual Report 2025-26",
+      "verification_status": "verified",
+      "verified_by": "TCS official integrated report portal; local SHA-256 verified on 2026-11-06"
+    },
+    "16701a01695cf0354e3e33d11bcc82142d56562b2317f7f494c8e541db796473": {
+      "source_id": "16701a01695cf0354e3e33d11bcc82142d56562b2317f7f494c8e541db796473",
+      "company_id": "infy",
+      "url": "https://www.infosys.com/investors/reports-filings/annual-report/annual/documents/infosys-ar-26.pdf",
+      "source_type": "company_ir",
+      "label": "Infosys Integrated Annual Report 2025-26",
+      "verification_status": "verified",
+      "verified_by": "Infosys official annual reports page; public PDF response verified on 2026-11-06"
+    }
+  }
+}
