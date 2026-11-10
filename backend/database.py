@@ -12,7 +12,10 @@ users = db["users"]
 profiles = db["profiles"]
 settings = db["settings"]
 conversations = db["conversations"]
-otps = db["otps"]  # one-time codes for email verification / password reset
+otps = db["otps"]  
+news = db["news"] 
+receipts = db["receipts"]   # with the other collections
+# one-time codes for email verification / password reset
 
 
 def init_indexes() -> None:
@@ -23,3 +26,6 @@ def init_indexes() -> None:
     conversations.create_index([("user_id", ASCENDING), ("updated_at", DESCENDING)])
     otps.create_index([("email", ASCENDING), ("purpose", ASCENDING)], unique=True)
     otps.create_index("expires_at", expireAfterSeconds=0)  # expired codes are removed automatically
+    news.create_index([("uid", ASCENDING)], unique=True)
+    news.create_index([("published_at", DESCENDING)])
+    receipts.create_index([("user_id", ASCENDING), ("created_at", DESCENDING)])   # inside init_indexes()

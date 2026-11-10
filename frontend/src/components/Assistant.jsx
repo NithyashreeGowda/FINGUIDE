@@ -6,8 +6,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import MyProfile from "./MyProfile";
-import ContextStatus from "./ContextStatus";
-import { addMessage, createConversation, getConversation } from "../api";
+import { addMessage, createConversation, createReceipt, getConversation } from "../api";
 
 const SUGGESTED_QUERIES = [
   "Why was this recommended?",
@@ -27,14 +26,15 @@ export default function Assistant({ user, profileData, onProfileUpdated, openCon
   const [editing, setEditing] = useState(false);
   const [notice, setNotice] = useState("");
   const [convId, setConvId] = useState(openConvId || null);
+  const [receipt, setReceipt] = useState({ status: "idle", msg: "" });
   const chatEndRef = useRef(null);
 
   const { profile, completeness, context } = profileData;
   const ready = context.status === "READY";
   const firstName = user.name.split(" ")[0];
-
+  
   const openEditor = () => setEditing(true);
-
+  
   // opened from History: load that saved conversation
   useEffect(() => {
     if (!openConvId) return;
@@ -77,6 +77,27 @@ export default function Assistant({ user, profileData, onProfileUpdated, openCon
     }
   };
 
+  const saveReceipt = async () => {
+    setReceipt({ status: "saving", msg: "" });
+    try {
+      await createReceipt({
+        symbol: "NVDA",
+        name: "NVIDIA Corporation",
+        sentiment: "Positive",
+        confidence: 84,
+        reasons: [
+          "Strong alignment with your investment horizon and moderate risk profile, supported by positive recent financial signals.",
+          "Strong recent performance",
+          "Positive financial sentiment",
+          "Fits your investment horizon",
+        ],
+      });
+      setReceipt({ status: "saved", msg: "Saved. Follow it on the Track Record page." });
+    } catch (e) {
+      setReceipt({ status: "error", msg: e.message || "Could not save the receipt." });
+    }
+  };
+
   /* EDIT PROFILE — opens inside the Assistant */
   if (editing) {
     return (
@@ -105,29 +126,25 @@ export default function Assistant({ user, profileData, onProfileUpdated, openCon
 
 
         <div className="assistant-greeting">
-  <h2>{greeting()}, {firstName}</h2>
+          <h2>{greeting()}, {firstName}</h2>
 
-  <div className="assistant-profile-status">
-    <span className="profile-status-text">
-      <CheckCircle2 size={15} />
-      {ready
-        ? "Financial context complete"
-        : context.status === "CONFLICTING_CONTEXT"
-        ? "Context needs review"
-        : "More information needed"}
-    </span>
+          <div className="assistant-profile-status">
+            <span className={`profile-status-text ${ready ? "" : "warn"}`}>
+              {ready ? <CheckCircle2 size={15} /> : <AlertTriangle size={15} />}
+              {ready
+                ? "Financial context complete"
+                : context.status === "CONFLICTING_CONTEXT"
+                ? "Context needs review"
+                : "More information needed"}
+            </span>
 
-    <button
-      type="button"
-      className="btn-outline"
-      onClick={openEditor}
-    >
-      Edit profile
-    </button>
-  </div>
-
-  {!ready && <ContextStatus context={context} onEdit={openEditor} />}
-</div>
+            {ready && (
+              <button type="button" className="btn-outline" onClick={openEditor}>
+                Edit profile
+              </button>
+            )}
+          </div>
+        </div>
 
         {!ready ? (
           <div className="assistant-profile-prompt">
@@ -139,9 +156,17 @@ export default function Assistant({ user, profileData, onProfileUpdated, openCon
 
             <p>
               {context.status === "CONFLICTING_CONTEXT"
-                ? "Personalized recommendations are paused until your profile is reviewed."
-                : "Personalized recommendations are paused until your profile is complete."}
+                ? "Recommendations are paused until you review:"
+                : context.message}
             </p>
+
+            {context.status === "CONFLICTING_CONTEXT" && (
+              <ul className="assistant-prompt-issues">
+                {context.conflicts.map((c) => (
+                  <li key={c.code}>{c.message}</li>
+                ))}
+              </ul>
+            )}
 
             <button type="button" onClick={openEditor}>
               Edit Financial Profile
@@ -211,6 +236,32 @@ export default function Assistant({ user, profileData, onProfileUpdated, openCon
                   <li>Valuation risk</li>
                 </ul>
               </div>
+            </div>
+
+            <div className="rc-save">
+              <button
+                type="button"
+                onClick={saveReceipt}
+                disabled={receipt.status === "saving" || receipt.status === "saved"}
+              >
+                {receipt.status === "saving"
+                  ? "Saving..."
+                  : receipt.status === "saved"
+                  ? "Tracking"
+                  : "Track this pick"}
+              </button>
+
+              <small
+                className={
+                  receipt.status === "saved"
+                    ? "ok"
+                    : receipt.status === "error"
+                    ? "bad"
+                    : ""
+                }
+              >
+                {receipt.msg || "Saves a receipt of this pick and tracks it against the market."}
+              </small>
             </div>
 
           </div>

@@ -11,7 +11,7 @@ import {
   ChevronRight,
   Check,
 } from "lucide-react";
-import { createProfile, updateProfile } from "../api";
+import { checkProfile, createProfile, updateProfile } from "../api";
 
 const RISK_PREFERENCES = ["conservative", "moderate", "aggressive"];
 const LEVELS = ["low", "medium", "high"];
@@ -29,6 +29,21 @@ const INITIAL_FORM = {
   existing_investments: "",
   liabilities: "",
   target_return_percent: "",
+};
+
+const FIELD_LABELS = {
+  age: "age",
+  income: "monthly income",
+  monthly_expenses: "monthly expenses",
+  investment_amount: "investment capital",
+  target_return_percent: "expected return",
+  investment_horizon: "investment horizon",
+  financial_goal: "financial goal",
+  risk_preference: "risk preference",
+  risk_capacity: "risk capacity",
+  existing_investments: "existing investments",
+  liabilities: "liabilities",
+  liquidity_requirement: "liquidity requirement",
 };
 
 const isEmpty = (value) =>
@@ -58,8 +73,8 @@ const SECTIONS = [
     title: "Investment Plan",
     desc: "Your capital, time horizon and goals.",
     icon: TrendingUp,
-    fields: ["investment_amount", "investment_horizon", "financial_goal"],
-  },
+    fields: ["investment_amount", "target_return_percent", "investment_horizon", "financial_goal"],   },
+    
   {
     id: "risk",
     title: "Risk Profile",
@@ -79,11 +94,16 @@ const SECTIONS = [
 const TEXT_FIELDS = ["financial_goal", "risk_preference", "risk_capacity", "liquidity_requirement"];
 
 const HORIZON_OPTIONS = [
-  ["1", "Less than 1 year"],
-  ["3", "1–3 years"],
-  ["5", "3–5 years"],
-  ["10", "5–10 years"],
-  ["15", "10+ years"],
+  ["0.25", "3 months"],
+  ["0.5", "6 months"],
+  ["1", "1 year"],
+  ["2", "2 years"],
+  ["3", "3 years"],
+  ["5", "5 years"],
+  ["7", "7 years"],
+  ["10", "10 years"],
+  ["15", "15 years"],
+  ["20", "20+ years"],
 ];
 
 const GOAL_OPTIONS = [
@@ -129,6 +149,18 @@ export default function MyProfile({ initial = null, onSaved, onBack }) {
   };
 
   const handleSave = async () => {
+    // Every field is mandatory: block the save and open the first incomplete section.
+    const missing = allFields.filter((f) => isEmpty(formData[f]));
+    if (missing.length) {
+      const firstSection = SECTIONS.find((s) => s.fields.some((f) => missing.includes(f)));
+      setOpenId(firstSection.id);
+      setMessage({
+        type: "error",
+        text: `Please fill in all fields. Missing: ${missing.map((f) => FIELD_LABELS[f]).join(", ")}.`,
+      });
+      return;
+    }
+
     const age = Number(formData.age);
     if (!isEmpty(formData.age) && (age < 18 || age > 100)) {
       setMessage({ type: "error", text: "Age must be between 18 and 100." });
@@ -235,8 +267,8 @@ export default function MyProfile({ initial = null, onSaved, onBack }) {
             <div className="fp-editor-grid">
               <InputField label="Investment Capital" type="number" prefix="₹" value={formData.investment_amount}
                 placeholder="2,50,000" onChange={(v) => updateField("investment_amount", v)} />
-              <InputField label="Expected Return (optional)" type="number" suffix="%" value={formData.target_return_percent}
-                placeholder="Optional" onChange={(v) => updateField("target_return_percent", v)} />
+              <InputField label="Expected Annual Return" type="number" suffix="%" value={formData.target_return_percent}
+                placeholder="e.g. 12" onChange={(v) => updateField("target_return_percent", v)} />
               <SelectField label="Investment Horizon" value={formData.investment_horizon}
                 options={HORIZON_OPTIONS} onChange={(v) => updateField("investment_horizon", v)} />
               <SelectField label="Financial Goal" value={formData.financial_goal}
@@ -265,6 +297,8 @@ export default function MyProfile({ initial = null, onSaved, onBack }) {
                 value={formData.liquidity_requirement} onChange={(v) => updateField("liquidity_requirement", v)} />
             </div>
           )}
+
+          <RealityCheck form={formData} fields={openSection.fields} onApply={updateField} />
         </section>
       )}
       <div className="fp-footer">
@@ -279,6 +313,58 @@ export default function MyProfile({ initial = null, onSaved, onBack }) {
         </button>
       </div>
 
+    </div>
+  );
+}
+
+/* Live "Reality Check": asks the backend validator about the draft as the user types
+   and offers one-tap fixes. `fields` limits it to the conflicts relevant to this step. */
+function RealityCheck({ form, fields, onApply }) {
+  const [conflicts, setConflicts] = useState([]);
+  const draftKey = JSON.stringify(wzPayload(form));
+
+  useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await checkProfile(wzPayload(form));
+        if (!cancelled) setConflicts(res.conflicts || []);
+      } catch {
+        if (!cancelled) setConflicts([]);
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [draftKey]);
+
+  const shown = conflicts.filter((c) => c.fields.some((f) => fields.includes(f)));
+  if (!shown.length) return null;
+
+  return (
+    <div className="rc-box" role="status">
+      <div className="rc-title">
+        <AlertCircle size={15} /> Reality check
+      </div>
+
+      {shown.map((c) => (
+        <div className="rc-item" key={c.code}>
+          <p>{c.message}</p>
+          <div className="rc-fixes">
+            {(c.fixes || []).map((f) => (
+              <button
+                type="button"
+                key={`${f.field}-${f.value}`}
+                className="rc-fix"
+                onClick={() => onApply(f.field, String(f.value))}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -361,7 +447,7 @@ const WZ_RISK_HINTS = {
 
 const WZ_STEPS = [
   { label: "About You", title: "About You", required: ["age", "income", "monthly_expenses"] },
-  { label: "Investment", title: "Investment Plan", required: ["investment_amount", "investment_horizon", "financial_goal"] },
+  { label: "Investment", title: "Investment Plan", required: ["investment_amount", "target_return_percent", "investment_horizon", "financial_goal"] },
   { label: "Risk", title: "Risk Profile", required: ["risk_preference", "risk_capacity"] },
   { label: "Financial Position", title: "Financial Position", required: ["existing_investments", "liabilities", "liquidity_requirement"] },
 ];
@@ -497,7 +583,7 @@ export function OnboardingWizard({ user, onSaved }) {
                 <div className="wz-grid2">
                   <InputField label="Investment Capital" type="number" prefix="₹" placeholder="2,50,000"
                     value={form.investment_amount} onChange={(v) => set("investment_amount", v)} />
-                  <InputField label="Expected Return (optional)" type="number" suffix="%" placeholder="Optional"
+                  <InputField label="Expected Annual Return" type="number" suffix="%" placeholder="e.g. 12"
                     value={form.target_return_percent} onChange={(v) => set("target_return_percent", v)} />
                 </div>
                 <div className="wz-grid2">
@@ -535,6 +621,8 @@ export function OnboardingWizard({ user, onSaved }) {
                   value={form.liquidity_requirement} onChange={(v) => set("liquidity_requirement", v)} />
               </div>
             )}
+
+            <RealityCheck form={form} fields={WZ_STEPS[step].required} onApply={set} />
 
             {error && (
               <div className="wz-error">

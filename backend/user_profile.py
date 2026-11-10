@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from auth import get_current_user
-from context_validator import completeness, validate_context
+from context_validator import completeness, find_conflicts, validate_context
 from database import profiles, settings as settings_col, conversations as conv_col
 
 router = APIRouter(prefix="/profile", tags=["profile"])
@@ -58,6 +58,9 @@ def _response(doc: dict) -> dict:
         "context": validate_context(data),
     }
 
+@router.post("/check")                   # ← NEW (paste these 3 lines)
+def check_profile(body: ProfileIn, user: dict = Depends(get_current_user)):
+    return {"conflicts": find_conflicts(body.model_dump())}
 
 @router.get("")
 def get_profile(user: dict = Depends(get_current_user)):

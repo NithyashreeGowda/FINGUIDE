@@ -197,12 +197,11 @@ export default function History({ onOpenAssistant }) {
 
   /* ---------- summary ---------- */
 
-  async function loadSummary(id = openId) {
+  async function loadSummary(id = openId, refresh = false) {
     if (!id) return;
     setSummaryLoading(true);
     try {
-      const result = await getHistorySummary(id);
-      setSummary(result.summary);
+      const result = await getHistorySummary(id, refresh);      setSummary(result.summary);
       setSummarySaved(Boolean(result.saved));
     } catch (e) {
       setError(e.message || "Could not create a summary.");
@@ -637,7 +636,7 @@ export default function History({ onOpenAssistant }) {
                   loading={summaryLoading}
                   saved={summarySaved}
                   onSave={saveSummary}
-                  onRefresh={() => loadSummary()}
+                  onRefresh={() => loadSummary(openId, true)}
                 />
               ) : (
                 <div className="hp-thread">

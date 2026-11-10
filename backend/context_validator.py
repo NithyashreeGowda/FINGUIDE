@@ -23,11 +23,11 @@ LABELS = {
     "existing_investments": "existing investments",
     "liquidity_requirement": "liquidity requirement",
     "liabilities": "liabilities",
+    "target_return_percent":"expected return"
 }
 
-
 def _blank(value) -> bool:
-    return value is None or value == ""
+    return value is None or (isinstance(value, str) and value.strip() == "")
 
 
 def completeness(profile: dict) -> int:
@@ -40,12 +40,17 @@ def _join(items):
         return "".join(items)
     return ", ".join(items[:-1]) + " and " + items[-1]
 
+def _period(years) -> str:
+    if years < 1:
+        m = round(years * 12)
+        return f"{m} month{'s' if m != 1 else ''}"
+    return f"{years:g} year{'s' if years != 1 else ''}"
 
 def find_conflicts(p: dict) -> list:
     conflicts = []
 
-    def add(code, fields, text):
-        conflicts.append({"code": code, "fields": fields, "message": text})
+    def add(code, fields, text,fixes=()):
+        conflicts.append({"code": code, "fields": fields, "message": text,"fixes": list(fixes)})
 
     risk = p.get("risk_preference")
     capacity = p.get("risk_capacity")
@@ -55,11 +60,13 @@ def find_conflicts(p: dict) -> list:
 
     if risk == "conservative" and target is not None and target >= 20:
         add("CONSERVATIVE_HIGH_RETURN", ["risk_preference", "target_return_percent"],
-            f"A conservative risk preference rarely fits a {target:g}% target return.")
+            f"A conservative risk preference rarely fits a {target:g}% target return.",
+            [{"field": "target_return_percent", "value": 9, "label": "Set return to 9%"},
+             {"field": "risk_preference", "value": "moderate", "label": "Switch to moderate risk"}])
 
     if horizon is not None and horizon <= 1 and target is not None and target >= 20:
         add("SHORT_HORIZON_HIGH_RETURN", ["investment_horizon", "target_return_percent"],
-            f"A {target:g}% return over {horizon:g} year(s) is unrealistic without very high risk.")
+            f"A {target:g}% return over {_period(horizon)}  is unrealistic without very high risk.")
 
     if risk == "aggressive" and capacity == "low":
         add("PREFERENCE_EXCEEDS_CAPACITY", ["risk_preference", "risk_capacity"],

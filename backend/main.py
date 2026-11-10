@@ -11,6 +11,7 @@ from database import init_indexes
 from market_insights import router as insights_router, start_insights_worker
 from market_news import router as news_router, start_news_worker, _db, _now
 from history_tools import router as history_tools_router
+from receipts import router as receipts_router
 
 app = FastAPI(title="FinGuide API")
 
@@ -30,6 +31,7 @@ app.include_router(user_profile.conv_router)
 app.include_router(insights_router)
 if rag_router:
     app.include_router(rag_router)
+app.include_router(receipts_router) 
 
 
 @app.on_event("startup")

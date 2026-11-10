@@ -8,6 +8,7 @@ import {
   Newspaper,
   TrendingUp,
   Menu,
+  ClipboardCheck,
 } from "lucide-react";
 
 import Assistant from "../components/Assistant";
@@ -15,11 +16,13 @@ import History from "../components/History";
 import Settings from "../components/Settings";
 import MarketNews from "../pages/MarketNews";
 import MarketInsights from "../pages/MarketInsights";
+import TrackRecord from "../pages/TrackRecord";
 const NAV_ITEMS = [
   { id: "assistant", label: "Assistant", icon: MessageSquare },
   { id: "history", label: "History", icon: HistoryIcon },
   { id: "market-insights", label: "Market Insights", icon: TrendingUp },
   { id: "market-news", label: "Market News", icon: Newspaper },
+  { id: "track-record", label: "Track Record", icon: ClipboardCheck },
 ];
 
 
@@ -155,7 +158,7 @@ export default function MainApp({
           )}
           {activeTab === "market-insights" && <MarketInsights />}
           {activeTab === "market-news" && <MarketNews />}
-
+          {activeTab === "track-record" && <TrackRecord />}
           {activeTab === "settings" && (
             <Settings
               user={user}
