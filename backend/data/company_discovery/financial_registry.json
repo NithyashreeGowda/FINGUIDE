@@ -48,6 +48,54 @@
       "document_categories": [
         "annual_report"
       ]
+    },
+    "hcltech": {
+      "company_id": "hcltech",
+      "name": "HCL Technologies Ltd.",
+      "symbol": "HCLTECH",
+      "exchange": "NSE",
+      "country": "India",
+      "sector": null,
+      "official_website": null,
+      "investor_relations_url": null,
+      "filing_source_urls": [],
+      "document_categories": []
+    },
+    "hdfcbank": {
+      "company_id": "hdfcbank",
+      "name": "HDFC Bank Ltd.",
+      "symbol": "HDFCBANK",
+      "exchange": "NSE",
+      "country": "India",
+      "sector": null,
+      "official_website": null,
+      "investor_relations_url": null,
+      "filing_source_urls": [],
+      "document_categories": []
+    },
+    "icicibank": {
+      "company_id": "icicibank",
+      "name": "ICICI Bank Ltd.",
+      "symbol": "ICICIBANK",
+      "exchange": "NSE",
+      "country": "India",
+      "sector": null,
+      "official_website": null,
+      "investor_relations_url": null,
+      "filing_source_urls": [],
+      "document_categories": []
+    },
+    "wipro": {
+      "company_id": "wipro",
+      "name": "Wipro Ltd.",
+      "symbol": "WIPRO",
+      "exchange": "NSE",
+      "country": "India",
+      "sector": null,
+      "official_website": null,
+      "investor_relations_url": null,
+      "filing_source_urls": [],
+      "document_categories": []
     }
   },
   "sources": {

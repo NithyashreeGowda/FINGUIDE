@@ -455,6 +455,10 @@ def validate_evidence_source(
         source_type.strip().lower(),
         0.0,
     )
+    verification_status = evidence.get("verification_status", "unknown")
+    source_verified = verification_status == "verified"
+    if not source_verified:
+        source_credibility_score = 0.0
 
     if reference_date is None:
         comparison_date = date.today()
@@ -484,6 +488,8 @@ def validate_evidence_source(
             "source_credibility_score": source_credibility_score,
             "freshness_score": 0.0,
             "is_fresh": False,
+            "verification_status": verification_status,
+            "source_verified": source_verified,
         }
 
     age_days = (comparison_date - evidence_date).days
@@ -502,6 +508,8 @@ def validate_evidence_source(
         "source_credibility_score": source_credibility_score,
         "freshness_score": round(freshness_score, 4),
         "is_fresh": is_fresh,
+        "verification_status": verification_status,
+        "source_verified": source_verified,
     }
 
 
@@ -569,6 +577,10 @@ def validate_evidence(
         result.get("is_fresh", False)
         for result in source_validation
     )
+    all_sources_verified = all(
+        result.get("source_verified", False)
+        for result in source_validation
+    )
     claim_supported = (
         claim_support is None
         or claim_support.get("claim_supported", False)
@@ -579,6 +591,17 @@ def validate_evidence(
         evidence_valid = False
     elif not claim_supported:
         status = "INSUFFICIENT_SUPPORT"
+        evidence_valid = False
+    elif not all_sources_verified:
+        has_unverified_source = any(
+            result.get("verification_status") == "unverified"
+            for result in source_validation
+        )
+        status = (
+            "UNVERIFIED_SOURCE"
+            if has_unverified_source
+            else "SOURCE_VERIFICATION_UNKNOWN"
+        )
         evidence_valid = False
     elif not all_fresh:
         status = "LOW_EVIDENCE"

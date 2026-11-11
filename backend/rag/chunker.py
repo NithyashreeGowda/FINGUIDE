@@ -118,6 +118,7 @@ def create_evidence_chunks(
         "publication_date",
         "source_organization",
         "verification_status",
+        "source_sha256",
     )
 
     for page_data in evidence_pages:
