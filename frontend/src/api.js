@@ -6,6 +6,7 @@ localStorage.removeItem(TOKEN_KEY); // clear any old saved login
 export const getToken = () => window.__finguideToken || null;
 export const setToken = (t) => { window.__finguideToken = t; };
 export const clearToken = () => { window.__finguideToken = null; };
+export const checkProfile = (body) => request("/profile/check", { method: "POST", body });
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -85,9 +86,9 @@ export async function fetchInsights() {
 }
 // ---- History feature endpoints ----
 
-export const getHistorySummary = (id) =>
+export const getHistorySummary = (id, refresh = false) =>
   request(
-    `/history-tools/summary/${encodeURIComponent(id)}`
+    `/history-tools/summary/${encodeURIComponent(id)}${refresh ? "?refresh=true" : ""}`
   );
 
 export const saveHistorySummary = (id, summary) =>
@@ -98,6 +99,17 @@ export const saveHistorySummary = (id, summary) =>
       body: summary,
     }
   );
+export const createReceipt = (body) => request("/receipts", { method: "POST", body });
+export const listReceipts = (fresh = false) => request(`/receipts${fresh ? "?fresh=true" : ""}`);
+export const getScorecard = (fresh = false) => request(`/receipts/scorecard${fresh ? "?fresh=true" : ""}`);
+export const getReceiptHistory = (id, range = "ALL", fresh = false, compare = []) =>
+  request(
+    `/receipts/${encodeURIComponent(id)}/history?range=${range}${fresh ? "&fresh=true" : ""}${
+      compare.length ? `&compare=${encodeURIComponent(compare.join(","))}` : ""
+    }`
+  );
+export const getReceiptInsight = (id, range = "ALL") =>
+  request(`/receipts/${encodeURIComponent(id)}/insight?range=${range}`);
 
 export const getKnowledgeMap = () =>
   request("/history-tools/knowledge-map");
